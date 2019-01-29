@@ -1,12 +1,16 @@
 from __future__ import print_function
 from matplotlib import pyplot as plt
 from matplotlib import colors
+#from matplotlib.image import imsave
 import numpy as np
 from timeit import default_timer as timer
 import numba as nb
+import argparse
+
+
 
 ESCAPE_RADIUS=2**30
-MAX_ITERATION=2048
+MAX_ITERATION=3000
 
 # about 3:2 image
 IMG_DPI=360
@@ -18,14 +22,30 @@ IMG_H_INCH=10
 #IM_MIN=-1
 #IM_MAX=1
 
-RE_MIN=np.float64(-0.74877)
-RE_MAX=np.float64(-0.74871)
-IM_MIN=np.float64(0.06506)
-IM_MAX=np.float64(0.06510)
+#RE_MIN=np.float64(-0.74877)
+#RE_MAX=np.float64(-0.74871)
+#IM_MIN=np.float64(0.06506)
+#IM_MAX=np.float64(0.06510)
+C_STEP=np.float(0.000018)
+C_X=np.float64(-0.748742)
+C_Y=np.float64(0.065078)
 
+
+#C_STEP=np.float(0.00000203)
+#C_X=np.float64(-0.74478548)
+#C_Y=np.float64(0.11246286)
+
+#C_STEP=np.float(0.034)
+#C_X=np.float64(0.13972)
+#C_Y=np.float64(-0.61771)
+
+RE_MIN=C_X-1.5*C_STEP
+RE_MAX=C_X+1.5*C_STEP
+IM_MIN=C_Y-C_STEP
+IM_MAX=C_Y+C_STEP
 
 # imshow params
-GAMMA=0.25
+GAMMA=0.22
 INTERPOLATION='bilinear'
 
 #https://www.ibm.com/developerworks/community/blogs/jfp/entry/How_To_Compute_Mandelbrodt_Set_Quickly?lang=en_us
@@ -94,13 +114,20 @@ def init_complex_region(res,ims,c_region):
         for i in nb.prange(c_region.shape[1]):
             c_region[j,i] = res[i] + ims[j]*1j
 
+
+def parse_arg():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-s', dest='save_to_file', action='store', type=str, help='save to file')
+    return parser.parse_args()
+
 def main():
-    fig, ax = plt.subplots(figsize=(IMG_W_INCH, IMG_H_INCH), dpi=IMG_DPI)
+    args = parse_arg()
+    fig = plt.figure()
+    fig.set_size_inches(IMG_W_INCH, IMG_H_INCH)
+    fig.set_dpi(IMG_DPI)
+    ax = plt.Axes(fig, [0., 0., 1., 1.])
     ax.set_axis_off()
-    ax.set_position([0.,0.,1.,1.])
-    ax.margins(0)
-    fig.subplots_adjust(left=0,right=1,bottom=0,top=1)
-    fig.set_frameon(False)
+    fig.add_axes(ax)
     
     res = np.linspace(RE_MIN, RE_MAX, IMG_W_INCH*IMG_DPI, dtype=np.float64)
     ims = np.linspace(IM_MIN, IM_MAX, IMG_H_INCH*IMG_DPI, dtype=np.float64)
@@ -116,22 +143,26 @@ def main():
     print(" ...rendered in {} second".format(end_time-start_time))
 
     norm = colors.PowerNorm(GAMMA)
-    ax.imshow(depth,cmap='magma',origin='lower',norm=norm, interpolation=INTERPOLATION)
+    img = ax.imshow(depth,cmap='magma',origin='lower',norm=norm, interpolation=INTERPOLATION)
 
 
-    xticks = np.arange(0, IMG_W_INCH*IMG_DPI+1, IMG_W_INCH*IMG_DPI/4)
-    xticks_delta = (RE_MAX-RE_MIN)/4.0
-    xticks_label = np.arange(RE_MIN, RE_MAX+xticks_delta, xticks_delta,dtype=np.float64 )
-    plt.xticks(xticks,['{:.6f}'.format(xl) for xl in xticks_label],fontsize='xx-small')
+    #xticks = np.arange(0, IMG_W_INCH*IMG_DPI+1, IMG_W_INCH*IMG_DPI/4)
+    #xticks_delta = (RE_MAX-RE_MIN)/4.0
+    #xticks_label = np.arange(RE_MIN, RE_MAX+xticks_delta, xticks_delta,dtype=np.float64 )
+    #plt.xticks(xticks,['{:.6f}'.format(xl) for xl in xticks_label],fontsize='xx-small')
     
-    yticks = np.arange(0, IMG_H_INCH*IMG_DPI+1, IMG_H_INCH*IMG_DPI/4)
-    yticks_delt = (IM_MAX-IM_MIN)/4.0
-    yticks_label = np.arange(IM_MIN, IM_MAX+yticks_delt, yticks_delt,dtype=np.float64 )
-    plt.yticks(yticks, ['{:.6f}'.format(yl) for yl in yticks_label],fontsize='xx-small')
+    #yticks = np.arange(0, IMG_H_INCH*IMG_DPI+1, IMG_H_INCH*IMG_DPI/4)
+    #yticks_delt = (IM_MAX-IM_MIN)/4.0
+    #yticks_label = np.arange(IM_MIN, IM_MAX+yticks_delt, yticks_delt,dtype=np.float64 )
+    #plt.yticks(yticks, ['{:.6f}'.format(yl) for yl in yticks_label],fontsize='xx-small')
+
+    # save file before show, to avoid interactive
+    if args.save_to_file is not None:
+        fname = args.save_to_file
+        print(" save to file {}".format(fname))
+        fig.savefig(fname, dpi=IMG_DPI)
     plt.show()
 
-    # save file
-    fig.savefig("mandelbrot.jpg", dpi=IMG_DPI, bbox_inches='tight', pad_inches=0, frameon='false')
 
 if __name__ == '__main__':
     main()
